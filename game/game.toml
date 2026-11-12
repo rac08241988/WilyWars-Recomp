@@ -1,0 +1,35 @@
+# game.toml — Mega Man: The Wily Wars (Capcom, 1994), USA (Mega Drive Mini /
+# Genesis Mini release), 2 MB ROM. 68000, flat $000000-$1FFFFF, no banking.
+# Serial "GM T-12053 -00". Save memory is a serial I2C EEPROM at $200001
+# (header "RA" $E840, $200001-$200001), emulated by the runner adapter.
+#
+# ROM identity: size 2097152, CRC32 0CD405DB,
+# SHA-256 C3E5E56C1252DE5A1FF3BB68B47366120F2C85D333A9CA0EB6DF3DAB1B03E583.
+# Vectors: SSP $00FF0414, Entry $000228, H-int $0003F2, V-int $000418.
+# V-int only sets the flag word $FFBEBA; the main loop at $000F50 clears it
+# and polls it at $000F5C (tst.w (a0) / beq self), which the recompiler's
+# poll-loop idiom turns into an interrupt-poll yield.
+#
+# The game is compiled C: most control flow goes through function pointers
+# kept in RAM (jsr (a0)), so static discovery is heuristic and the Tier-3
+# interpreter floor is always on (see mmww_spec.c).
+
+[game]
+output_prefix = "mmww"
+jump_table_autodiscovery = true
+
+[ram_layout]
+game_mode      = 0x000000
+vint_runcount  = 0x000000
+vint_routine   = 0x000000
+plc_pending    = 0x000000
+initial_ssp    = 0x00FF0414   # reset SSP from the vector table (LOAD-BEARING)
+vbla_stack     = 0x00FF0414
+intr_stack     = 0x00FF0414
+player_object  = 0x000000
+level_modes    = []
+
+[functions]
+extra = [0x000228, 0x000418, 0x0003F2]
+late_extra = []
+blacklist = []

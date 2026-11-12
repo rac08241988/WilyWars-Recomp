@@ -1,0 +1,17 @@
+# Host-side fallback when distro mingw-w64 (gcc-posix) is not installed.
+# Points at the llvm-mingw UCRT toolchain already present on this machine.
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+if(NOT DEFINED LLVM_MINGW_ROOT)
+    set(LLVM_MINGW_ROOT "/workspace/n64recomp/llvm-mingw-20261006-ucrt-ubuntu-22.04-x86_64")
+endif()
+set(CMAKE_C_COMPILER   "${LLVM_MINGW_ROOT}/bin/x86_64-w64-mingw32-gcc")
+set(CMAKE_CXX_COMPILER "${LLVM_MINGW_ROOT}/bin/x86_64-w64-mingw32-g++")
+set(CMAKE_RC_COMPILER  "${LLVM_MINGW_ROOT}/bin/x86_64-w64-mingw32-windres")
+set(CMAKE_AR           "${LLVM_MINGW_ROOT}/bin/x86_64-w64-mingw32-ar")
+set(CMAKE_RANLIB       "${LLVM_MINGW_ROOT}/bin/x86_64-w64-mingw32-ranlib")
+set(CMAKE_FIND_ROOT_PATH "${LLVM_MINGW_ROOT}/x86_64-w64-mingw32")
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

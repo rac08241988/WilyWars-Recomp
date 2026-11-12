@@ -1,0 +1,11 @@
+# Never commit the ROM or anything generated from it.
+*.bin
+*.md.rom
+*.smc
+*.sfc
+*.gen
+game/mmww.bin
+generated/
+generation-stage/
+build*/
+dist/

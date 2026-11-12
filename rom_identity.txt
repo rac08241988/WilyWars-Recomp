@@ -1,0 +1,16 @@
+# ROM identity for Mega Man: The Wily Wars (USA) — the single source of truth.
+# Read by game/mmww_spec.c (CRC32 + size), scripts/setup.sh and packaging.
+# Raw .md/.bin image (Genesis ROMs have no copier header to strip).
+
+display_name    = Mega Man: The Wily Wars
+rom_file        = Mega Man - The Wily Wars (USA) (Mega Drive Mini, Genesis Mini).md
+expected_crc32  = 0cd405db
+expected_md5    = 8e860e4f7c7ee5febad9134a56766112
+expected_sha1   = 26ad72719991e94dbe477c78e65d68f4a4fe51e6
+expected_sha256 = c3e5e56c1252de5a1ff3bb68b47366120f2c85d333a9ca0eb6df3dab1b03e583
+rom_size        = 2097152
+mapping         = flat 2 MB, $000000-$1FFFFF; I2C EEPROM at $200001
+region          = USA
+header_title    = MEGAMAN THE WILY WARS
+serial          = GM T-12053 -00
+game_id         = wilywars-usa
