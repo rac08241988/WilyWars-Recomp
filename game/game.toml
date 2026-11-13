@@ -17,6 +17,9 @@
 [game]
 output_prefix = "mmww"
 jump_table_autodiscovery = true
+# Runtime evidence, refreshed with tools/merge_coverage.py (addresses only).
+runtime_exec_file = "mmww_executed_pcs.txt"
+discovery_files = ["mmww_floor.discovery.toml", "mmww_pointers.discovery.toml", "mmww_native_blacklist.toml"]
 
 [ram_layout]
 game_mode      = 0x000000

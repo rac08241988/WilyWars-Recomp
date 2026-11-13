@@ -1,0 +1,23 @@
+# Addresses that must stay on the Tier-3 interpreter floor.
+# Found by bisecting the runtime-coverage leads (boot -> title -> file select):
+# compiling any of these natively leaves the screen black after the intro.
+# The first four are menu/title task-state handlers of the form
+#   move.l a2,-(a7) / movea.l 8(a7),a2 / jsr $797E (fade status) ...
+# All eleven are task-state handlers called through the main loop's jsr (a0) at $000FA6..$001054
+# (move.l a2,-(a7) / movea.l 8(a7),a2 ... move.l a0,(a2)). 64 other handlers of the same
+# shape compile fine, so the trigger is narrower than the prologue. Root cause in the native
+# path is still open; the Tier-3 floor runs these correctly.
+[functions]
+blacklist = [
+  0x016A16,
+  0x0170DA,
+  0x017270,
+  0x01CC3C,
+  0x012F74, # found with the file-select image check: menu stalls on an empty monitor frame
+  0x01CBDA, # same
+  0x0173FC, # found with the game-select/stage-select image check: MM1 title never appears
+  0x018630, # same
+  0x00CF3E, # found with the Cut Man stage check: stage start goes to a black screen
+  0x018056, # same
+  0x0124B6, # found with the strict (99.8%) check: 'LOAD FILE n. OK?' prompt text is garbled
+]
