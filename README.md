@@ -21,7 +21,9 @@ time and built into a native Windows x64 exe.
   generated and built on your PC.
 - In-game side panel (Esc / F12 / pad Guide): shaders from the libretro slang
   set via librashader (live preview, default Off), sharp/smooth filter, opt-in
-  16:9 widescreen (default Off), quit.
+  16:9 widescreen (default Off), quit. Widescreen keeps the game, sprites and
+  HUD at 4:3 and fills the side columns with the stage: real tiles where the
+  game has drawn them, otherwise a darkened mirror of the stage edge.
 - Saves: the cartridge's own EEPROM saves, kept in `mmww.eep` beside the exe.
   There are no save states.
 

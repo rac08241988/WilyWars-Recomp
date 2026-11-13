@@ -13,6 +13,7 @@
  * - Settings persist in mmww_video.ini beside the exe. renderer=sdl there (or
  *   MMWW_RENDERER=sdl) keeps the runner's original SDL_Renderer path. */
 #include "mmww_gl.h"
+int mmww_video_native_w(void);   /* game/mmww_video.c */
 #include "host_present_hooks.h"
 #include "gamepad.h"
 #include "ui/rpanel.h"
@@ -333,8 +334,11 @@ static void quad(GLu tex, int dw, int dh, int x, int y, int w, int h, float a) {
 }
 
 static void frame_rect(int dw, int dh, int fw, int fh, int *x, int *y, int *w, int *h) {
+  /* the 4:3 picture is the native row (256 in H32, 320 in H40); widened rows
+   * keep that pixel aspect */
   double ar = 4.0 / 3.0;
-  if (fw > 320) ar = 4.0 / 3.0 * fw / 320.0;   /* widened rows keep the pixel aspect */
+  int base = mmww_video_native_w();
+  if (G.widescreen && base > 0 && fw > base) ar = 4.0 / 3.0 * fw / base;
   (void)fh;
   int W = dw, H = (int)(dw / ar + 0.5);
   if (H > dh) { H = dh; W = (int)(dh * ar + 0.5); }
