@@ -1,0 +1,112 @@
+diff --git a/runner/host_present_hooks.h b/runner/host_present_hooks.h
+new file mode 100644
+index 0000000..c4201ca
+--- /dev/null
++++ b/runner/host_present_hooks.h
+@@ -0,0 +1,25 @@
++#pragma once
++/* Optional host presentation hooks (OpenGL presenter, side panel, shaders).
++ * A game adds them from its own sources; with no hooks set the runner keeps its
++ * SDL_Renderer path unchanged. */
++#include <SDL.h>
++#include <stdint.h>
++
++typedef struct GenesisPresentHooks {
++    /* Before SDL_CreateWindow: may add window flags and SDL hints. */
++    void (*pre_window)(Uint32 *window_flags);
++    /* After the window and the SDL renderer exist. */
++    void (*window_created)(SDL_Window *window, SDL_Renderer *renderer);
++    /* Draw this frame. Return 1 when the hook drew it (then swap() is used
++     * instead of SDL_RenderPresent). Pixels are ARGB8888, top row first. */
++    int  (*present)(SDL_Window *window, const uint32_t *pixels, int stride,
++                    int width, int height);
++    void (*swap)(SDL_Window *window);
++    /* Every SDL event first. Return 1 to swallow it and open the menu,
++     * 2 to swallow it only, 0 to let the runner handle it. */
++    int  (*event)(const SDL_Event *ev);
++    /* Modal menu (the guest is frozen). Sets *running = 0 to quit. */
++    void (*run_menu)(SDL_Window *window, int *running);
++} GenesisPresentHooks;
++
++extern GenesisPresentHooks g_present_hooks;
+diff --git a/runner/main.c b/runner/main.c
+index 97704c7..24ce5f8 100644
+--- a/runner/main.c
++++ b/runner/main.c
+@@ -219,6 +219,8 @@ static int run_picker_cmd(const char *cmd, char *out, size_t max_len)
+ /* Native storage includes the hardware renderer's bounded margins and
+  * interlace height. Custom presentation grows the stride/texture dynamically;
+  * it is not limited by the VDP's 512px plane or a fixed aspect-ratio preset. */
++#include "host_present_hooks.h"
++GenesisPresentHooks g_present_hooks;
+ #define NATIVE_SCREEN_STRIDE 512
+ #define MAX_SCREEN_HEIGHT 480
+ static int s_frame_stride = NATIVE_SCREEN_STRIDE;
+@@ -2867,6 +2869,7 @@ int main(int argc, char *argv[])
+         if (g_app_config.fullscreen == 2)      win_flags |= SDL_WINDOW_FULLSCREEN;
+         else if (g_app_config.fullscreen == 1) win_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+     }
++    if (g_present_hooks.pre_window) g_present_hooks.pre_window(&win_flags);
+     SDL_Window *window = SDL_CreateWindow(
+         window_title,
+         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+@@ -2918,6 +2921,7 @@ int main(int argc, char *argv[])
+                 (ri.flags & SDL_RENDERER_PRESENTVSYNC) != 0);
+     }
+     update_render_logical_size(renderer);
++    if (g_present_hooks.window_created) g_present_hooks.window_created(window, renderer);
+ 
+     SDL_Texture *texture = SDL_CreateTexture(
+         renderer,
+@@ -3370,9 +3374,13 @@ session_begin:;
+             continue;   /* re-check at loop top */
+         }
+ 
+-        int overlay_request = 0;
++        int overlay_request = 0, host_menu_request = 0;
+         SDL_Event ev;
+         while (SDL_PollEvent(&ev)) {
++            if (g_present_hooks.event) {
++                int hooked = g_present_hooks.event(&ev);
++                if (hooked) { gamepad_handle_event(&ev); if (hooked == 1) host_menu_request = 1; continue; }
++            }
+             if(ev.type==SDL_RENDER_TARGETS_RESET||ev.type==SDL_RENDER_DEVICE_RESET) {
+                 genesis_hd_gpu_destroy(hd_gpu);hd_gpu=NULL;hd_checked=0;
+             }
+@@ -3459,6 +3467,14 @@ session_begin:;
+         }
+ 
+         if (!running) break; /* Close must not execute another game/render tick. */
++        if (host_menu_request && g_present_hooks.run_menu) {
++            audio_set_playback_enabled(0);
++            g_present_hooks.run_menu(window, &running);
++            audio_set_playback_enabled(!turbo);
++            if (!running) { window_close_requested = 1; break; }
++            prev_overlay_pad = gamepad_overlay_mask();
++            continue;
++        }
+         {
+             uint32_t pad = gamepad_overlay_mask();
+             uint32_t menu = GP_OVERLAY_BACK | GP_OVERLAY_RB;
+@@ -3990,7 +4006,10 @@ session_begin:;
+             }
+             peer_view_was_active = peer_view_is_active;
+         }
+-        SDL_RenderCopy(renderer, frame_texture, &src, NULL);
++        int hook_presented = frame_texture == texture && g_present_hooks.present &&
++            g_present_hooks.present(window, present_src, s_frame_stride,
++                                    s_screen_width, s_screen_height);
++        if (!hook_presented) SDL_RenderCopy(renderer, frame_texture, &src, NULL);
+ #if GENESIS_HAS_RECOMP_NET
+         /* Process the peer INPUT and emit our CONFIRM before the blocking
+          * present, so confirmation delivery overlaps vsync as well. */
+@@ -4010,7 +4029,8 @@ session_begin:;
+                 genesis_host_wait_until(deadline, perf_frequency);
+         }
+         FRAME_PHASE(8);
+-        SDL_RenderPresent(renderer);
++        if (hook_presented && g_present_hooks.swap) g_present_hooks.swap(window);
++        else SDL_RenderPresent(renderer);
+ #if GENESIS_HAS_RECOMP_NET
+         if (!genesis_netplay_active())
+ #endif

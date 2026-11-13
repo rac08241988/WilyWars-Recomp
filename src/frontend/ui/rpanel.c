@@ -6,7 +6,7 @@
 
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "../../recomp-ui/src/third_party/stb_truetype.h"
+#include "stb_truetype.h"
 #include "inter_font_data.h"
 
 static stbtt_fontinfo g_font[2];

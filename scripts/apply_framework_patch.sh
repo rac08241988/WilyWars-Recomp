@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Apply this port's small engine patch (cartridge I/O hook used by the save
-# EEPROM in game/mmww_eeprom.c). Safe to re-run.
+# Apply this port's small engine patches, in name order. Safe to re-run.
+#   segagenesisrecomp-cart-io.patch        cartridge I/O hook (save EEPROM, game/mmww_eeprom.c)
+#   segagenesisrecomp-present-hooks.patch  presentation hooks (OpenGL presenter, panel, src/gl/)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/segagenesisrecomp"

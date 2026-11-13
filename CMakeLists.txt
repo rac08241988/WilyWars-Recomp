@@ -41,7 +41,8 @@ genesisrecomp_add_generated_sources(MMWW_GENERATED mmww
 
 add_executable(WilyWarsGenesisRecomp
     ${MMWW_RUNNER_SOURCES} ${MMWW_GENERATED}
-    game/mmww_spec.c game/mmww_eeprom.c)
+    game/mmww_spec.c game/mmww_eeprom.c game/mmww_video.c
+    src/gl/mmww_gl.c src/frontend/ui/rpanel.c)
 add_dependencies(WilyWarsGenesisRecomp ${MMWW_GENERATED_TARGET})
 genesisrecomp_runner_target(WilyWarsGenesisRecomp)
 target_compile_definitions(WilyWarsGenesisRecomp PRIVATE
@@ -54,7 +55,8 @@ target_include_directories(WilyWarsGenesisRecomp PRIVATE
     "${RUNNER_ROOT}" "${RUNNER_ROOT}/include" "${RUNNER_ROOT}/video"
     "${RUNNER_ROOT}/external/ymfm/src" "${RUNNER_ROOT}/external/superzazu"
     "${RUNNER_ROOT}/external/clowncommon" "${RECOMP_ROOT}/recompiler/src"
-    "${CMAKE_SOURCE_DIR}/game")
+    "${CMAKE_SOURCE_DIR}/game" "${CMAKE_SOURCE_DIR}/src/gl" "${CMAKE_SOURCE_DIR}/src/frontend"
+    "${CMAKE_SOURCE_DIR}/recomp-ui/src/third_party" "${CMAKE_SOURCE_DIR}/vendor/librashader/include")
 if(WIN32 AND NOT MSVC)
     target_include_directories(WilyWarsGenesisRecomp PRIVATE
         "${CMAKE_SOURCE_DIR}/third_party/SDL2-mingw-2.28.5/x86_64-w64-mingw32/include")
