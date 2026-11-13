@@ -119,3 +119,15 @@ PolyForm Noncommercial 1.0.0 with its `PERMISSIONS.md` grant, so binaries are
 for non-commercial use only. None of this covers the game, which is not
 distributed here. Mega Man is a trademark of Capcom; this project is not
 affiliated with Capcom or Sega.
+
+## One-click Windows builder
+
+`tools/package_windows.sh <llvm-mingw bin> <GenesisRecomp.exe> <shaders dir>` assembles
+`dist/WilyWarsRecomp-win64/` (local folder; ~66 MB): `MMWW-Setup.exe`, the Windows
+recompiler in `tools\`, the project/engine sources in `src\` and the librashader shaders.
+It refuses to finish if a ROM, any 2 MB image, or generated C ends up inside.
+
+On the player's PC `MMWW-Setup.exe` shows the ROM picker, checks size + CRC32 0CD405DB,
+downloads pinned llvm-mingw 20261006 / CMake 3.31.8 / Ninja 1.12.1 into `toolchain\`,
+generates and builds the game into `game\`, then launches it. Later runs just launch;
+`--rebuild` rebuilds. `MMWW_SETUP_ROM` / `MMWW_SETUP_NO_LAUNCH` are for automated tests.
