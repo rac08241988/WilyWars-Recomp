@@ -1,8 +1,8 @@
 # Mega Man: The Wily Wars Recompiled (Genesis)
 
-> **Work in progress (v0.1.0, not released).** Boots, menus and Mega Man 1 stages
-> run on Windows (tested under Wine 9.22), with the side menu, shaders, opt-in
-> widescreen and the one-click builder.
+> **v0.1.0 (not released yet).** Boots, menus and stages run on Windows (tested
+> under Wine 9.22), with the side menu, shaders, opt-in widescreen, cartridge
+> saves and the one-click builder.
 >
 > This project ships no game code or ROM data. You supply your own cartridge dump.
 
@@ -24,19 +24,31 @@ time and built into a native Windows x64 exe.
   16:9 widescreen (default Off), quit. Widescreen keeps the game, sprites and
   HUD at 4:3 and fills the side columns with the stage: real tiles where the
   game has drawn them, otherwise a darkened mirror of the stage edge.
+- **Check for updates** in the side panel: asks GitHub for the latest release
+  and, if there is a newer one, opens its page in your browser (nothing is
+  downloaded or installed automatically).
+- Window and exe icon from the USA Genesis box art.
 - Saves: the cartridge's own EEPROM saves, kept in `mmww.eep` beside the exe.
   There are no save states.
 
 ## Play on Windows (no coding needed)
 
-Not released yet. When it is, the steps will be the same as the other ports:
-download the zip from Releases, open the exe, click **Browse For ROM**, pick
-`Mega Man - The Wily Wars (USA) (Mega Drive Mini, Genesis Mini).md`, let it
-build, then click **Play**.
+1. Download the release zip and unzip it anywhere (for example `C:\Games\WilyWars`).
+2. Double-click **`MMWW-Setup.exe`** and pick your ROM:
+   `Mega Man - The Wily Wars (USA) (Mega Drive Mini, Genesis Mini).md`
+   (2,097,152 bytes, CRC32 `0cd405db`). Setup refuses any other dump.
+3. First run only: setup downloads a portable compiler (about 300 MB download,
+   900 MB on disk, from the official llvm-mingw, CMake and Ninja GitHub
+   releases), translates the game to C on your PC and builds it. This takes a
+   few minutes; progress is shown in the window and saved to `setup.log`.
+4. The game starts. Next time, open `MMWW-Setup.exe` again (it just starts the
+   game) or `game\WilyWarsGenesisRecomp.exe` directly.
+
+`MMWW-Setup.exe --rebuild` builds again (for example after updating the zip).
+Your saves (`game\mmww.eep`) and settings (`game\mmww_video.ini`) are kept.
 
 ## Controls & Shortcuts
 
-Current framework defaults (the Options menu and Xbox layout come later).
 The Genesis pad map is positional.
 
 | Action | Xbox controller | Keyboard |
@@ -44,28 +56,39 @@ The Genesis pad map is positional.
 | D-pad | D-pad | Arrow keys |
 | Genesis A / B / C | B / A / X | Z / X / C |
 | Start | Menu (Start) | Enter |
+| Side panel (pause) | Guide | Esc or F12 |
+| Fast-forward (hold) | Back | Tab |
+| Fullscreen | | F11 or Alt+Enter |
+
+In the side panel: Up/Down picks a row, Left/Right changes it (shaders preview
+live), Enter applies, Esc resumes.
 
 ## Shaders
 
-Not wired in yet. The libretro slang and GLSL preset sets and librashader are
-staged from the other ports (see [`SHADERS.md`](SHADERS.md)). **Shaders will only
-work on the Vulkan and OpenGL renderers.**
+The side panel's **Shader** row lists the libretro slang presets run through
+librashader on the OpenGL renderer (see [`SHADERS.md`](SHADERS.md)). Default is
+Off. If `renderer=sdl` is set in `mmww_video.ini`, shaders are not available.
 
 ## Tested On
 
-The project owner's PC:
+Target machine (the project owner's PC); development testing ran under
+Wine 9.22 on Linux:
 
 - CPU: AMD Ryzen 7 5800X3D
 - GPU: NVIDIA GeForce RTX 3070 Ti (8 GB)
 - RAM: 32 GB dual-channel
 - Storage: NVMe SSD
 - OS: Windows and AtlasOS
-- Renderers: Vulkan and OpenGL
+- Renderer: OpenGL 3.3
 
 ## Known limitations
 
 - **Early build.** Boots, menus and Mega Man 1 stages are tested; Mega Man 2
-  and 3 are not covered by the native pass yet (they run on the interpreter).
+  and 3 are less covered by the native pass (more of them runs on the
+  interpreter, which is slower but correct).
+- **No save states.** Use the game's own save files.
+- **Widescreen sides are a fill.** The game only draws one tile column past the
+  4:3 view, so the sides are mostly a darkened mirror of the stage edge.
 - **Partly interpreted.** The game is compiled C that jumps through function
   pointers, so the first static pass finds few routines. The rest runs on the
   interpreter fallback until coverage is fed back into `game/game.toml`.
@@ -108,7 +131,10 @@ expected and the game does not check it.
 - [segagenesisrecomp](https://github.com/mstan/segagenesisrecomp) by Matthew
   Stanley and contributors: the Genesis static-recompilation framework,
   including ymfm, superzazu/z80 and SDL2 (see its `THIRD-PARTY-LICENSES.md`).
-- [recomp-ui](https://github.com/mstan/recomp-ui): the launcher.
+- [recomp-ui](https://github.com/mstan/recomp-ui): side-panel UI and fonts.
+- recomp-updater (rac08241988): the Check for updates helper.
+- [miniz](https://github.com/richgel999/miniz) (MIT): zip extraction in the setup program.
+- Box art: libretro-thumbnails (USA Genesis cover), used for the icon.
 - Options menu, shader and display code carried forward from rac08241988's
   earlier recomp ports (see [`NOTICE.md`](NOTICE.md)).
 - libretro slang/GLSL shaders and librashader.

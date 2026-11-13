@@ -17,6 +17,7 @@ int mmww_video_native_w(void);   /* game/mmww_video.c */
 #include "host_present_hooks.h"
 #include "gamepad.h"
 #include "ui/rpanel.h"
+#include "recomp_updater.h"
 
 #define LIBRA_RUNTIME_OPENGL
 #include "librashader_ld.h"
@@ -479,9 +480,26 @@ static int hk_event(const SDL_Event *ev) {
 }
 
 /* ------------------------------------------------------------------ panel */
-enum { R_RESUME, R_SHADER, R_FILTER, R_WIDE, R_QUIT, R_COUNT };
+enum { R_RESUME, R_SHADER, R_FILTER, R_WIDE, R_UPDATE, R_QUIT, R_COUNT };
 static const char *ROW_NAME[R_COUNT] = {"Resume", "Shader", "Filter", "Widescreen",
-                                        "Quit game"};
+                                        "Check for updates", "Quit game"};
+
+/* Check for updates: first Enter asks GitHub for the latest release; if a
+ * newer one exists, a second Enter opens its page in the browser. */
+static RecompUpdaterResult g_upd; static int g_upd_state;
+static void update_row(void) {
+  if (g_upd_state && g_upd.status == RECOMP_UPDATER_UPDATE_AVAILABLE) {
+    note(recomp_updater_open_url(g_upd.release_url) == 0 ? "Opened the release page" : "Couldn't open the browser");
+    return;
+  }
+  memset(&g_upd, 0, sizeof g_upd);
+  recomp_updater_check(RECOMP_UPDATER_REPO_OWNER, RECOMP_UPDATER_REPO_NAME, MMWW_BUILD_VERSION, &g_upd);
+  g_upd_state = 1;
+  if (g_upd.status == RECOMP_UPDATER_UPDATE_AVAILABLE) note("Update available: v%s (Enter opens the page)", g_upd.latest);
+  else if (g_upd.status == RECOMP_UPDATER_UP_TO_DATE) note("Up to date (v%s)", g_upd.current);
+  else note("Couldn't check for updates: %s", g_upd.error[0] ? g_upd.error : "no connection");
+  fprintf(stderr, "[UPDATE] status=%d current=%s latest=%s err=%s\n", g_upd.status, g_upd.current, g_upd.latest, g_upd.error);
+}
 
 static void row_value(int r, char *out, size_t n) {
   out[0] = 0;
@@ -491,6 +509,9 @@ static void row_value(int r, char *out, size_t n) {
     else snprintf(out, n, "%s", i < 0 ? "Off" : g_shaders[i].name); break; }
   case R_FILTER: snprintf(out, n, "%s", G.linear ? "Smooth" : "Sharp"); break;
   case R_WIDE: snprintf(out, n, "%s", G.widescreen ? "16:9" : "Off"); break;
+  case R_UPDATE: snprintf(out, n, "%s", g_upd_state == 0 ? "v" MMWW_BUILD_VERSION
+                                       : g_upd.status == RECOMP_UPDATER_UPDATE_AVAILABLE ? "Open release page"
+                                       : g_upd.status == RECOMP_UPDATER_UP_TO_DATE ? "Up to date" : "Couldn't check"); break;
   }
 }
 
@@ -563,6 +584,7 @@ static void change(int row, int d, int *running) {
     break; }
   case R_FILTER: G.linear = !G.linear; break;
   case R_WIDE: G.widescreen = !G.widescreen; mmww_widescreen_set(G.widescreen); break;
+  case R_UPDATE: if (!d) update_row(); break;
   case R_QUIT: *running = 0; break;
   }
 }

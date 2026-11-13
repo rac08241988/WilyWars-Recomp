@@ -42,7 +42,7 @@ genesisrecomp_add_generated_sources(MMWW_GENERATED mmww
 add_executable(WilyWarsGenesisRecomp
     ${MMWW_RUNNER_SOURCES} ${MMWW_GENERATED}
     game/mmww_spec.c game/mmww_eeprom.c game/mmww_video.c
-    src/gl/mmww_gl.c src/frontend/ui/rpanel.c)
+    src/gl/mmww_gl.c src/frontend/ui/rpanel.c src/updater/recomp_updater.c)
 add_dependencies(WilyWarsGenesisRecomp ${MMWW_GENERATED_TARGET})
 genesisrecomp_runner_target(WilyWarsGenesisRecomp)
 target_compile_definitions(WilyWarsGenesisRecomp PRIVATE
@@ -50,12 +50,14 @@ target_compile_definitions(WilyWarsGenesisRecomp PRIVATE
     DEFAULT_DEBUG_PORT=4410
     $<$<BOOL:${GEN_ENABLE_TRACE}>:GEN_ENABLE_TRACE=1>
     $<$<BOOL:${SONIC_REVERSE_DEBUG}>:SONIC_REVERSE_DEBUG=1>
-    MMWW_BUILD_VERSION="${PROJECT_VERSION}")
+    MMWW_BUILD_VERSION="${PROJECT_VERSION}"
+    RECOMP_UPDATER_REPO_OWNER="rac08241988"
+    RECOMP_UPDATER_REPO_NAME="WilyWarsGenesisRecomp")
 target_include_directories(WilyWarsGenesisRecomp PRIVATE
     "${RUNNER_ROOT}" "${RUNNER_ROOT}/include" "${RUNNER_ROOT}/video"
     "${RUNNER_ROOT}/external/ymfm/src" "${RUNNER_ROOT}/external/superzazu"
     "${RUNNER_ROOT}/external/clowncommon" "${RECOMP_ROOT}/recompiler/src"
-    "${CMAKE_SOURCE_DIR}/game" "${CMAKE_SOURCE_DIR}/src/gl" "${CMAKE_SOURCE_DIR}/src/frontend"
+    "${CMAKE_SOURCE_DIR}/game" "${CMAKE_SOURCE_DIR}/src/gl" "${CMAKE_SOURCE_DIR}/src/frontend" "${CMAKE_SOURCE_DIR}/src/updater"
     "${CMAKE_SOURCE_DIR}/recomp-ui/src/third_party" "${CMAKE_SOURCE_DIR}/vendor/librashader/include")
 if(WIN32 AND NOT MSVC)
     target_include_directories(WilyWarsGenesisRecomp PRIVATE
@@ -64,7 +66,7 @@ endif()
 target_link_libraries(WilyWarsGenesisRecomp PRIVATE SDL2::SDL2)
 target_compile_definitions(WilyWarsGenesisRecomp PRIVATE SDL_MAIN_HANDLED)
 if(WIN32)
-    target_link_libraries(WilyWarsGenesisRecomp PRIVATE ws2_32 comdlg32)
+    target_link_libraries(WilyWarsGenesisRecomp PRIVATE ws2_32 comdlg32 winhttp shell32)
     if(NOT MSVC)
         target_link_options(WilyWarsGenesisRecomp PRIVATE -static -static-libgcc -static-libstdc++)
     endif()
