@@ -1,8 +1,8 @@
 # Mega Man: The Wily Wars Recompiled (Genesis)
 
-> **Work in progress (v0.1.0, not released).** It boots to the title screen and
-> the file-select screen on Windows (tested under Wine 9.22). The menu, shaders,
-> one-click builder and widescreen from the other ports are still being moved over.
+> **Work in progress (v0.1.0, not released).** Boots, menus and Mega Man 1 stages
+> run on Windows (tested under Wine 9.22), with the side menu, shaders, opt-in
+> widescreen and the one-click builder.
 >
 > This project ships no game code or ROM data. You supply your own cartridge dump.
 
