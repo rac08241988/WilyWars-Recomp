@@ -9,11 +9,12 @@
  */
 #include "game_spec.h"
 #include "genesis_runtime.h"
+#include "mmww_eeprom.h"
 #include <stddef.h>
 #include <stdint.h>
 
 static void mmww_call_entry_point(void) { recomp_call_addr(0x000228u); }
-static void mmww_call_vblank(void)      { recomp_call_addr(0x000418u); }
+static void mmww_call_vblank(void)      { mmww_eeprom_frame(); recomp_call_addr(0x000418u); }
 static void mmww_call_hblank(void)      { recomp_call_addr(0x0003F2u); }
 
 const GameSpec g_game_spec = {
@@ -25,4 +26,7 @@ const GameSpec g_game_spec = {
     .call_entry_point    = mmww_call_entry_point,
     .call_vblank         = mmww_call_vblank,
     .call_hblank         = mmww_call_hblank,
+    .sram_loaded         = mmww_eeprom_sram_loaded,
+    .rb_state_save       = mmww_eeprom_rb_save,
+    .rb_state_load       = mmww_eeprom_rb_load,
 };

@@ -41,7 +41,7 @@ genesisrecomp_add_generated_sources(MMWW_GENERATED mmww
 
 add_executable(WilyWarsGenesisRecomp
     ${MMWW_RUNNER_SOURCES} ${MMWW_GENERATED}
-    game/mmww_spec.c)
+    game/mmww_spec.c game/mmww_eeprom.c)
 add_dependencies(WilyWarsGenesisRecomp ${MMWW_GENERATED_TARGET})
 genesisrecomp_runner_target(WilyWarsGenesisRecomp)
 target_compile_definitions(WilyWarsGenesisRecomp PRIVATE

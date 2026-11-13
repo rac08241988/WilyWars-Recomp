@@ -21,6 +21,7 @@ sha() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1;
 WANT=$(sed -n 's/^expected_sha256 *= *//p' "$ROOT/rom_identity.txt" | tr -d '" ')
 cd "$ROOT"
 git submodule update --init --recursive
+bash "$ROOT/scripts/apply_framework_patch.sh"
 [ "$SHADERS" = 1 ] && bash "$ROOT/scripts/fetch_shaders.sh"
 if [ -n "$ROM" ]; then
   [ "$(sha "$ROM")" = "$WANT" ] || { echo "ERROR: $ROM is not Mega Man: The Wily Wars (USA) (sha256 mismatch, want $WANT)" >&2; exit 1; }

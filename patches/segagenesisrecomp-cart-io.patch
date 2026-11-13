@@ -1,0 +1,72 @@
+diff --git a/runner/video/genesis_bus.c b/runner/video/genesis_bus.c
+index c7d3a9c..5ec86e5 100644
+--- a/runner/video/genesis_bus.c
++++ b/runner/video/genesis_bus.c
+@@ -292,9 +292,19 @@ static void io_write(GenesisBus *b, uint32_t a, uint8_t v)
+ }
+ 
+ /* ---- 68K bus -------------------------------------------------------------- */
++/* Cartridge I/O hook (Wily Wars recomp patch): a game adapter can claim a
++ * small address window for an on-cart device (serial EEPROM etc.). The
++ * device sees every 68K access in [lo, hi] before SRAM/ROM decoding. */
++GenesisCartIo g_cart_io;
++static int cart_io_hit(uint32_t a)
++{
++    return g_cart_io.read16 && a >= g_cart_io.lo && a <= g_cart_io.hi;
++}
++
+ uint16_t gbus_read16(GenesisBus *b, uint32_t a)
+ {
+     a &= 0xFFFFFFu;
++    if (cart_io_hit(a)) return g_cart_io.read16(a & ~1u);
+     if (sram_hit(b, a)) {                                            /* SRAM    */
+         uint32_t o = a - b->sram_base;
+         return (uint16_t)((b->sram[o] << 8) | b->sram[(o + 1u) % b->sram_size]);
+@@ -392,6 +402,11 @@ uint8_t gbus_peek8(const GenesisBus *b, uint32_t a)
+ void gbus_write16(GenesisBus *b, uint32_t a, uint16_t v)
+ {
+     a &= 0xFFFFFFu;
++    if (cart_io_hit(a)) {
++        if (g_cart_io.write8) { g_cart_io.write8(a & ~1u, (uint8_t)(v >> 8));
++                                g_cart_io.write8(a | 1u, (uint8_t)v); }
++        return;
++    }
+     if (a >= 0xFF0000u) {                                            /* RAM     */
+         uint16_t o = (uint16_t)(a & 0xFFFFu);
+         g_ram[o] = (uint8_t)(v >> 8); g_ram[(uint16_t)(o + 1)] = (uint8_t)v;
+@@ -453,6 +468,10 @@ uint8_t gbus_read8(GenesisBus *b, uint32_t a)
+      * gbus_write8). */
+     if (a >= 0xA00000u && a < 0xA10000u && (a & 0xFFFFu) < 0x2000u)
+         return b->z80_ram[a & 0x1FFFu];
++    if (cart_io_hit(a & 0xFFFFFFu)) {
++        uint16_t w = g_cart_io.read16((a & 0xFFFFFFu) & ~1u);
++        return (a & 1) ? (uint8_t)w : (uint8_t)(w >> 8);
++    }
+     if (sram_hit(b, a & 0xFFFFFFu))                       /* SRAM: exact byte  */
+         return b->sram[(a & 0xFFFFFFu) - b->sram_base];
+     uint16_t w = gbus_read16(b, a & ~1u);
+@@ -462,6 +481,7 @@ uint8_t gbus_read8(GenesisBus *b, uint32_t a)
+ void gbus_write8(GenesisBus *b, uint32_t a, uint8_t v)
+ {
+     a &= 0xFFFFFFu;
++    if (cart_io_hit(a)) { if (g_cart_io.write8) g_cart_io.write8(a, v); return; }
+     /* Byte writes to RAM / Z80 RAM / PSG / FM need exact targeting. */
+     if (a >= 0xFF0000u) { g_ram[a & 0xFFFFu] = v; return; }
+     if (a >= 0xA00000u && a < 0xA10000u) {
+diff --git a/runner/video/genesis_bus.h b/runner/video/genesis_bus.h
+index a1fafbd..ca99fde 100644
+--- a/runner/video/genesis_bus.h
++++ b/runner/video/genesis_bus.h
+@@ -109,4 +109,12 @@ void     gbus_z80_write(GenesisBus *b, uint16_t addr, uint8_t val);
+ uint8_t *gbus_sram_buffer(GenesisBus *b);
+ uint32_t gbus_sram_size(const GenesisBus *b);
+ 
++/* Cartridge I/O hook (Wily Wars recomp patch). */
++typedef struct GenesisCartIo {
++    uint32_t lo, hi;                         /* inclusive 24-bit window   */
++    uint16_t (*read16)(uint32_t even_addr);  /* NULL = hook disabled      */
++    void     (*write8)(uint32_t addr, uint8_t v);
++} GenesisCartIo;
++extern GenesisCartIo g_cart_io;
++
+ #endif /* GENESIS_BUS_H */
