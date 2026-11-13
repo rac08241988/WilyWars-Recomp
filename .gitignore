@@ -9,3 +9,14 @@ generated/
 generation-stage/
 build*/
 dist/
+# Saves, settings, logs and release zips stay local.
+*.eep
+*.srm
+*.state
+*.ini
+!src/frontend/config.ini.template
+*.log
+*.zip
+*.md.rom
+logs/
+proof/

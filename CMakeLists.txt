@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(WilyWarsGenesisRecomp VERSION 0.1.0 LANGUAGES C CXX)
+project(WilyWarsGenesisRecomp VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -52,7 +52,7 @@ target_compile_definitions(WilyWarsGenesisRecomp PRIVATE
     $<$<BOOL:${SONIC_REVERSE_DEBUG}>:SONIC_REVERSE_DEBUG=1>
     MMWW_BUILD_VERSION="${PROJECT_VERSION}"
     RECOMP_UPDATER_REPO_OWNER="rac08241988"
-    RECOMP_UPDATER_REPO_NAME="WilyWarsGenesisRecomp")
+    RECOMP_UPDATER_REPO_NAME="WilyWars-Recomp")
 target_include_directories(WilyWarsGenesisRecomp PRIVATE
     "${RUNNER_ROOT}" "${RUNNER_ROOT}/include" "${RUNNER_ROOT}/video"
     "${RUNNER_ROOT}/external/ymfm/src" "${RUNNER_ROOT}/external/superzazu"

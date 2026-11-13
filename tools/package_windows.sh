@@ -72,8 +72,10 @@ while IFS= read -r -d '' f; do
 done < <(find "$OUT" \( -name '*.c' -o -name '*.h' \) -print0)
 [ $bad -eq 0 ] || { echo "package check FAILED"; exit 1; }
 if [ "${MAKE_ZIP:-0}" = 1 ]; then
-  ( cd "$ROOT/dist" && rm -f WilyWarsRecomp-win64.zip && python3 -c "import shutil; shutil.make_archive('WilyWarsRecomp-win64', 'zip', '.', 'WilyWarsRecomp-win64')" )
-  if unzip -l "$ROOT/dist/WilyWarsRecomp-win64.zip" | grep -Ei '\.(bin|md\.rom|gen|smd)$|/generated/|mmww_part[0-9]+\.c' ; then echo "REFUSING: zip has ROM/generated files"; exit 1; fi
-  echo "zip: $ROOT/dist/WilyWarsRecomp-win64.zip ($(du -h "$ROOT/dist/WilyWarsRecomp-win64.zip" | cut -f1)) - local only, not uploaded"
+  VER=$(sed -n 's/^project(.* VERSION \([0-9.]*\).*/\1/p' "$ROOT/CMakeLists.txt")
+  ZIP="WilyWars-GenesisRecomp-windows-x64-v$VER.zip"
+  ( cd "$ROOT/dist" && rm -f "$ZIP" && python3 -c "import shutil,sys; shutil.make_archive(sys.argv[1][:-4], 'zip', '.', 'WilyWarsRecomp-win64')" "$ZIP" )
+  if python3 -c "import zipfile,sys; sys.stdout.write('\n'.join(zipfile.ZipFile(sys.argv[1]).namelist()))" "$ROOT/dist/$ZIP" | grep -Ei '\.(bin|md\.rom|gen|smd|eep|srm|state)$|/generated/|mmww_part[0-9]+\.c' ; then echo "REFUSING: zip has ROM/save/generated files"; exit 1; fi
+  echo "zip: $ROOT/dist/$ZIP ($(du -h "$ROOT/dist/$ZIP" | cut -f1)) - local release asset"
 fi
 echo "package OK: $OUT ($(du -sh "$OUT" | cut -f1), $(find "$OUT" -type f | wc -l) files); no ROM, no generated code"

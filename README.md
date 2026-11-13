@@ -1,8 +1,9 @@
 # Mega Man: The Wily Wars Recompiled (Genesis)
 
-> **v0.1.0 (not released yet).** Boots, menus and stages run on Windows (tested
-> under Wine 9.22), with the side menu, shaders, opt-in widescreen, cartridge
-> saves and the one-click builder.
+> **v1.0.0.** Boots, menus and stages run on Windows, with the side menu,
+> shaders, opt-in widescreen, cartridge saves and the one-click builder.
+> Download: [Releases](https://github.com/rac08241988/WilyWars-Recomp/releases/latest)
+> (`WilyWars-GenesisRecomp-windows-x64-v1.0.0.zip`).
 >
 > This project ships no game code or ROM data. You supply your own cartridge dump.
 
@@ -33,7 +34,8 @@ time and built into a native Windows x64 exe.
 
 ## Play on Windows (no coding needed)
 
-1. Download the release zip and unzip it anywhere (for example `C:\Games\WilyWars`).
+1. Download the release zip from
+   [Releases](https://github.com/rac08241988/WilyWars-Recomp/releases/latest) and unzip it anywhere (for example `C:\Games\WilyWars`).
 2. Double-click **`MMWW-Setup.exe`** and pick your ROM:
    `Mega Man - The Wily Wars (USA) (Mega Drive Mini, Genesis Mini).md`
    (2,097,152 bytes, CRC32 `0cd405db`). Setup refuses any other dump.
@@ -96,8 +98,8 @@ Wine 9.22 on Linux:
 ## Build from source (Linux host, Windows exe)
 
 ```sh
-git clone --recursive <this repository>
-cd WilyWarsGenesisRecomp
+git clone --recursive https://github.com/rac08241988/WilyWars-Recomp.git
+cd WilyWars-Recomp
 scripts/setup.sh --rom "/path/to/Mega Man - The Wily Wars (USA) (Mega Drive Mini, Genesis Mini).md"
 cmake -S segagenesisrecomp/recompiler -B build-host -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-host
@@ -132,7 +134,8 @@ expected and the game does not check it.
   Stanley and contributors: the Genesis static-recompilation framework,
   including ymfm, superzazu/z80 and SDL2 (see its `THIRD-PARTY-LICENSES.md`).
 - [recomp-ui](https://github.com/mstan/recomp-ui): side-panel UI and fonts.
-- recomp-updater (rac08241988): the Check for updates helper.
+- recomp-updater (rac08241988): the Check for updates helper
+  (checks `rac08241988/WilyWars-Recomp` releases).
 - [miniz](https://github.com/richgel999/miniz) (MIT): zip extraction in the setup program.
 - Box art: libretro-thumbnails (USA Genesis cover), used for the icon.
 - Options menu, shader and display code carried forward from rac08241988's
