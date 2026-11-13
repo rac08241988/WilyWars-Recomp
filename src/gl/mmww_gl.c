@@ -141,6 +141,7 @@ static struct {
   /* librashader */
   libra_instance_t libra; int libra_state;
   libra_gl_filter_chain_t chain; char chain_id[256];
+  Uint32 preview_due;
   size_t frame_count;
   char msg[200]; Uint32 msg_until;
 } G;
@@ -252,13 +253,36 @@ static void libra_err(const char *what, libra_error_t err) {
   if (err) G.libra.error_free(&err);
 }
 
+/* Compiled chains are kept (up to CHAIN_CACHE) so scrolling back and forth
+ * over presets in the panel never recompiles one already built. */
+enum { CHAIN_CACHE = 6 };
+static struct { char id[256]; libra_gl_filter_chain_t chain; Uint32 used; } g_cache[CHAIN_CACHE];
+static void chain_park(void) {
+  if (!G.chain) return;
+  int slot = 0;
+  for (int k = 0; k < CHAIN_CACHE; k++) {
+    if (!g_cache[k].chain) { slot = k; break; }
+    if (g_cache[k].used < g_cache[slot].used) slot = k;
+  }
+  if (g_cache[slot].chain) G.libra.gl_filter_chain_free(&g_cache[slot].chain);
+  snprintf(g_cache[slot].id, sizeof g_cache[slot].id, "%s", G.chain_id);
+  g_cache[slot].chain = G.chain; g_cache[slot].used = SDL_GetTicks();
+  G.chain = NULL;
+}
 static void chain_sync(void) {
   if (!strcmp(G.chain_id, G.shader_id) && (G.chain || !G.shader_id[0])) return;
-  if (G.chain) { G.libra.gl_filter_chain_free(&G.chain); G.chain = NULL; }
+  chain_park();
   snprintf(G.chain_id, sizeof G.chain_id, "%s", G.shader_id);
   int i = shader_index();
   if (i < 0) return;
+  for (int k = 0; k < CHAIN_CACHE; k++)
+    if (g_cache[k].chain && !strcmp(g_cache[k].id, G.shader_id)) {
+      G.chain = g_cache[k].chain; g_cache[k].chain = NULL; g_cache[k].id[0] = 0;
+      G.frame_count = 0;
+      return;
+    }
   if (!libra_ok()) { note("librashader.dll not found"); G.shader_id[0] = 0; G.chain_id[0] = 0; return; }
+  Uint32 t0 = SDL_GetTicks();
   libra_shader_preset_t preset = NULL;
   libra_error_t err = G.libra.preset_create(g_shaders[i].path, &preset);
   if (err) { libra_err("preset", err); G.shader_id[0] = G.chain_id[0] = 0; return; }
@@ -268,8 +292,11 @@ static void chain_sync(void) {
   if (preset) G.libra.preset_free(&preset);
   if (err) { G.chain = NULL; libra_err("compile", err); G.shader_id[0] = G.chain_id[0] = 0; return; }
   G.frame_count = 0;
-  fprintf(stderr, "[GL] shader on: %s (%s)\n", g_shaders[i].name, g_shaders[i].path);
+  fprintf(stderr, "[GL] shader on: %s (%s) compiled in %u ms\n", g_shaders[i].name, g_shaders[i].path,
+          (unsigned)(SDL_GetTicks() - t0));
 }
+
+enum { PREVIEW_DELAY_MS = 250 };
 
 /* --------------------------------------------------------------- drawing */
 static const char *VS =
@@ -354,8 +381,13 @@ static void draw_frame(int dw, int dh) {
   gl.ClearColor(0, 0, 0, 1); gl.Clear(GL_COLOR_BUFFER_BIT);
   if (!G.last || G.last_w <= 0) return;
   int x, y, w, h; frame_rect(dw, dh, G.last_w, G.last_h, &x, &y, &w, &h);
-  chain_sync();
-  if (G.chain) {
+  /* While the Shader row is being scrolled the preview waits until the
+   * selection rests (PREVIEW_DELAY_MS) and draws unshaded meanwhile, so the
+   * panel never stalls on a compile per step. */
+  libra_gl_filter_chain_t use = NULL;
+  if (G.preview_due && !SDL_TICKS_PASSED(SDL_GetTicks(), G.preview_due)) use = NULL;
+  else { G.preview_due = 0; chain_sync(); use = G.chain; }
+  if (use) {
     if (!G.out_fbo) { gl.GenFramebuffers(1, &G.out_fbo); gl.GenTextures(1, &G.out_tex); }
     if (w != G.out_w || h != G.out_h) {
       tex_params(G.out_tex, 1);
@@ -368,7 +400,7 @@ static void draw_frame(int dw, int dh) {
     libra_image_gl_t in = {G.frame_tex, GL_RGBA8, (uint32_t)G.frame_w, (uint32_t)G.frame_h};
     libra_image_gl_t out = {G.out_tex, GL_RGBA8, (uint32_t)w, (uint32_t)h};
     libra_viewport_t vp = {0, 0, (uint32_t)w, (uint32_t)h};
-    libra_error_t err = G.libra.gl_filter_chain_frame(&G.chain, G.frame_count++, in, out, &vp, NULL, NULL);
+    libra_error_t err = G.libra.gl_filter_chain_frame(&use, G.frame_count++, in, out, &vp, NULL, NULL);
     gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
     for (unsigned u = 0; u < 16; u++) gl.BindSampler(u, 0);
     gl.Viewport(0, 0, dw, dh);
@@ -551,6 +583,7 @@ static void panel_draw(RpCanvas *c, int sel) {
   rp_finish(c);
 }
 
+static char g_panel_sig[1024];   /* what the panel texture currently shows */
 static void present_menu(SDL_Window *win, RpCanvas *c, int sel) {
   int dw, dh; SDL_GL_GetDrawableSize(win, &dw, &dh);
   SDL_GL_MakeCurrent(win, G.ctx);
@@ -560,14 +593,26 @@ static void present_menu(SDL_Window *win, RpCanvas *c, int sel) {
   if (c->w != pw || c->h != ph) {
     free(c->px); c->px = calloc((size_t)pw * ph, 4); c->w = pw; c->h = ph;
     rp_canvas_noclip(c);
+    g_panel_sig[0] = 0;               /* fresh texture: must redraw */
     tex_params(G.panel_tex, 1);
     gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, pw, ph, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
   }
   if (!c->px) return;
-  panel_draw(c, sel);
-  gl.BindTexture(GL_TEXTURE_2D, G.panel_tex);
-  gl.PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-  gl.TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pw, ph, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, c->px);
+  /* The panel is re-rasterized only when what it shows changes; otherwise the
+   * uploaded texture is reused, so an idle or scrolling panel costs one quad. */
+  char sig[1024]; int n = 0;
+  int msg_on = G.msg[0] && SDL_TICKS_PASSED(G.msg_until, SDL_GetTicks()) == 0;
+  n += snprintf(sig + n, sizeof sig - n, "%d|%dx%d|%d|%s", sel, pw, ph, msg_on, msg_on ? G.msg : "");
+  for (int r = 0; r < R_COUNT && n < (int)sizeof sig - 200; r++) {
+    char v[160]; row_value(r, v, sizeof v); n += snprintf(sig + n, sizeof sig - n, "|%s", v);
+  }
+  if (strcmp(sig, g_panel_sig)) {
+    snprintf(g_panel_sig, sizeof g_panel_sig, "%s", sig);
+    panel_draw(c, sel);
+    gl.BindTexture(GL_TEXTURE_2D, G.panel_tex);
+    gl.PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    gl.TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, pw, ph, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, c->px);
+  }
   gl.Enable(GL_BLEND); gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   quad(G.panel_tex, dw, dh, dw - pw, 0, pw, ph, 1.0f);
   gl.Disable(GL_BLEND);
@@ -581,6 +626,7 @@ static void change(int row, int d, int *running) {
     if (!n) { note("No shaders folder beside the exe"); break; }
     if (i < -1) i = n - 1; if (i >= n) i = -1;
     snprintf(G.shader_id, sizeof G.shader_id, "%s", i < 0 ? "" : g_shaders[i].id);
+    G.preview_due = SDL_GetTicks() + PREVIEW_DELAY_MS; if (!G.preview_due) G.preview_due = 1;
     break; }
   case R_FILTER: G.linear = !G.linear; break;
   case R_WIDE: G.widescreen = !G.widescreen; mmww_widescreen_set(G.widescreen); break;
@@ -593,6 +639,7 @@ static void hk_run_menu(SDL_Window *win, int *running) {
   if (!G.active) return;
   RpCanvas c; memset(&c, 0, sizeof c);
   int sel = 0, open = 1;
+  Uint64 last = 0, win_start = 0; int frames = 0; double worst = 0;
   fprintf(stderr, "[PANEL] open\n");
   while (open && *running) {
     SDL_Event ev;
@@ -624,7 +671,20 @@ static void hk_run_menu(SDL_Window *win, int *running) {
         else change(sel, 0, running);
       } else if (k == 5) open = 0;
     } while (open && *running && SDL_PollEvent(&ev));
-    if (open && *running) present_menu(win, &c, sel);
+    if (open && *running) {
+      present_menu(win, &c, sel);
+      /* frame-rate probe: frames per second and the worst frame time */
+      Uint64 now = SDL_GetPerformanceCounter();
+      double ms = last ? (double)(now - last) * 1000.0 / (double)SDL_GetPerformanceFrequency() : 0;
+      last = now; frames++; if (ms > worst) worst = ms;
+      if (!win_start) win_start = now;
+      double span = (double)(now - win_start) / (double)SDL_GetPerformanceFrequency();
+      if (span >= 1.0) {
+        static int probe = -1; if (probe < 0) probe = getenv("MMWW_PANEL_FPS") != NULL;
+        if (probe) fprintf(stderr, "[PANEL] fps=%.1f worst=%.1fms row=%d\n", frames / span, worst, sel);
+        frames = 0; worst = 0; win_start = now;
+      }
+    }
   }
   free(c.px);
   settings_save();
