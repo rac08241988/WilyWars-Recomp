@@ -72,7 +72,7 @@ while IFS= read -r -d '' f; do
 done < <(find "$OUT" \( -name '*.c' -o -name '*.h' \) -print0)
 [ $bad -eq 0 ] || { echo "package check FAILED"; exit 1; }
 if [ "${MAKE_ZIP:-0}" = 1 ]; then
-  ( cd "$ROOT/dist" && rm -f WilyWarsRecomp-win64.zip && zip -qr WilyWarsRecomp-win64.zip WilyWarsRecomp-win64 )
+  ( cd "$ROOT/dist" && rm -f WilyWarsRecomp-win64.zip && python3 -c "import shutil; shutil.make_archive('WilyWarsRecomp-win64', 'zip', '.', 'WilyWarsRecomp-win64')" )
   if unzip -l "$ROOT/dist/WilyWarsRecomp-win64.zip" | grep -Ei '\.(bin|md\.rom|gen|smd)$|/generated/|mmww_part[0-9]+\.c' ; then echo "REFUSING: zip has ROM/generated files"; exit 1; fi
   echo "zip: $ROOT/dist/WilyWarsRecomp-win64.zip ($(du -h "$ROOT/dist/WilyWarsRecomp-win64.zip" | cut -f1)) - local only, not uploaded"
 fi
