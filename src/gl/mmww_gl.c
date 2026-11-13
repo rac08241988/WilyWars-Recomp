@@ -436,6 +436,10 @@ static void hk_window_created(SDL_Window *win, SDL_Renderer *r) {
   G.vsync = !turbo;
   SDL_GL_SetSwapInterval(G.vsync ? 1 : 0);
   shaders_scan();
+  if (G.widescreen && !(SDL_GetWindowFlags(win) & SDL_WINDOW_FULLSCREEN)) {
+    int w, h; SDL_GetWindowSize(win, &w, &h);
+    SDL_SetWindowSize(win, h * 16 / 9, h);   /* 16:9 window for the widened view */
+  }
   G.active = 1;
   fprintf(stderr, "[GL] OpenGL presenter on (shader=%s, filter=%s, widescreen=%s)\n",
           G.shader_id[0] ? G.shader_id : "off", G.linear ? "linear" : "nearest",

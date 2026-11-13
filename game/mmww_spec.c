@@ -8,6 +8,7 @@
  * correctly on the interpreter and is logged for the next regeneration.
  */
 #include "game_spec.h"
+#include "game_video.h"
 #include "genesis_runtime.h"
 #include "mmww_eeprom.h"
 #include <stddef.h>
@@ -46,6 +47,8 @@ void mmww_dump_stack(void)
     }
 }
 
+extern const GameVideo g_mmww_video;   /* game/mmww_video.c */
+
 const GameSpec g_game_spec = {
     .display_name        = "Mega Man: The Wily Wars",
     .short_name          = "MMWW",
@@ -55,6 +58,8 @@ const GameSpec g_game_spec = {
     /* Native state loads restart the game fiber at the main loop's vblank wait
      * (the host C stack is not part of a save state). */
     .resume_main_loop_pc = 0x000F56u,
+    .video               = &g_mmww_video,  /* opt-in 16:9, default Off */
+    .video_default       = "off",
     .call_entry_point    = mmww_call_entry_point,
     .on_state_loaded     = mmww_state_loaded,
     .call_vblank         = mmww_call_vblank,
