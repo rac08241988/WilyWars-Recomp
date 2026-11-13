@@ -413,8 +413,21 @@ static void hk_pre_window(Uint32 *flags) {
   mmww_widescreen_set(G.widescreen);
 }
 
+/* Window icon: the USA Genesis cover staged beside the exe as icon.bmp
+ * (the exe itself also carries it as resource 1 for Explorer/taskbar). */
+static void set_window_icon(SDL_Window *win) {
+  char p[1100] = "icon.bmp";
+#ifdef _WIN32
+  char exe[1024]; DWORD n = GetModuleFileNameA(NULL, exe, sizeof exe);
+  if (n && n < sizeof exe) { char *sl = strrchr(exe, '\\'); if (sl) { *sl = 0; snprintf(p, sizeof p, "%s\\icon.bmp", exe); } }
+#endif
+  SDL_Surface *ic = SDL_LoadBMP(p);
+  if (ic) { SDL_SetWindowIcon(win, ic); SDL_FreeSurface(ic); }
+}
+
 static void hk_window_created(SDL_Window *win, SDL_Renderer *r) {
   (void)r;
+  set_window_icon(win);
   if (!G.want_gl) return;
   SDL_GLContext prev = SDL_GL_GetCurrentContext();
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

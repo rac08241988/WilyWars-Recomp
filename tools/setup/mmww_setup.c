@@ -206,9 +206,11 @@ static int build(void) {
 static int install_game(void) {
   char from[MAX_PATH], to[MAX_PATH];
   const char *files[][2] = {{"build\\WilyWarsGenesisRecomp.exe", "game\\WilyWarsGenesisRecomp.exe"},
-                            {"build\\SDL2.dll", "game\\SDL2.dll"}};
+                            {"build\\SDL2.dll", "game\\SDL2.dll"},
+                            {"build\\icon.png", "game\\icon.png"},
+                            {"build\\icon.bmp", "game\\icon.bmp"}};
   path(to, "game"); mkdirs(to);
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 4; i++) {
     path(from, files[i][0]); path(to, files[i][1]);
     if (!CopyFileA(from, to, FALSE)) return fail("Cannot copy %s", from);
   }

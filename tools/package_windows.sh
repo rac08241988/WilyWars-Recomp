@@ -12,14 +12,15 @@ LLVM="$1"; RECOMP_EXE="$2"; SHADERS="$3"
 OUT="$ROOT/dist/WilyWarsRecomp-win64"
 rm -rf "$OUT"; mkdir -p "$OUT/tools" "$OUT/src"
 
+"$LLVM/x86_64-w64-mingw32-windres" -I "$ROOT/src/win32" "$ROOT/src/win32/app.rc" -O coff -o /tmp/mmww_setup_icon.o
 "$LLVM/x86_64-w64-mingw32-clang" -O2 -static -o "$OUT/MMWW-Setup.exe" \
-    "$ROOT/tools/setup/mmww_setup.c" "$ROOT/tools/setup/third_party/miniz/miniz.c" \
+    "$ROOT/tools/setup/mmww_setup.c" "$ROOT/tools/setup/third_party/miniz/miniz.c" /tmp/mmww_setup_icon.o \
     -lurlmon -lcomdlg32 -lshell32
 cp "$RECOMP_EXE" "$OUT/tools/GenesisRecomp.exe"
 
 S="$OUT/src"
 cp "$ROOT/CMakeLists.txt" "$ROOT/README.md" "$S/"
-cp -r "$ROOT/cmake" "$ROOT/src" "$ROOT/vendor" "$S/"
+cp -r "$ROOT/cmake" "$ROOT/src" "$ROOT/vendor" "$ROOT/assets" "$S/"
 mkdir -p "$S/game"
 for f in "$ROOT"/game/*; do
   case "$f" in *.bin|*.md|*.gen|*.smd|*.rom) continue;; esac

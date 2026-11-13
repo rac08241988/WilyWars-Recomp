@@ -73,6 +73,20 @@ if(WIN32)
             "$<TARGET_FILE_DIR:WilyWarsGenesisRecomp>")
 endif()
 
+# Icon: USA Genesis cover (assets/icon). Embedded as resource 1 and staged
+# beside the exe for the SDL window icon.
+if(WIN32)
+    enable_language(RC)
+    target_sources(WilyWarsGenesisRecomp PRIVATE src/win32/app.rc)
+endif()
+add_custom_command(TARGET WilyWarsGenesisRecomp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/assets/icon/icon.png" "$<TARGET_FILE_DIR:WilyWarsGenesisRecomp>/icon.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/assets/icon/icon.bmp" "$<TARGET_FILE_DIR:WilyWarsGenesisRecomp>/icon.bmp"
+    COMMENT "WilyWarsGenesisRecomp: staging window icon beside the executable"
+    VERBATIM)
+
 option(MMWW_LAUNCHER "Build the recomp-ui pre-boot launcher" ON)
 if(MMWW_LAUNCHER)
     include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)

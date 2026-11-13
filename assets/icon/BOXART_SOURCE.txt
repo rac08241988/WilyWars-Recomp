@@ -1,0 +1,4 @@
+USA Sega Genesis front cover (Mega Man: The Wily Wars, CAPCOM, T-120446-50).
+Source: https://thumbnails.libretro.com/Sega%20-%20Mega%20Drive%20-%20Genesis/Named_Boxarts/Mega%20Man%20-%20The%20Wily%20Wars%20%28USA%29%20%28Genesis%20Mini%29.png
+Matched name: "Mega Man - The Wily Wars (USA) (Genesis Mini)" (libretro-thumbnails Named_Boxarts), 512x712.
+Fitted onto a black square without cropping or stretching.
