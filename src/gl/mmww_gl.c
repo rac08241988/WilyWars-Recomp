@@ -8,7 +8,8 @@
  *   SHADERS.md).
  * - Esc / F12 / pad Guide opens a side panel (rpanel software canvas drawn as
  *   an overlay): Resume, Shader (Left/Right = live preview), Filter,
- *   Widescreen, Save state, Load state, Quit. The guest is frozen meanwhile.
+ *   Widescreen, Quit. The guest is frozen meanwhile. (No save states: the
+ *   game's own EEPROM saves are the only saves.)
  * - Settings persist in mmww_video.ini beside the exe. renderer=sdl there (or
  *   MMWW_RENDERER=sdl) keeps the runner's original SDL_Renderer path. */
 #include "mmww_gl.h"
@@ -29,10 +30,6 @@
 #include <windows.h>
 #endif
 
-int runner_save_state_file(const char *path);
-int mmww_state_boundary(void);
-uint32_t mmww_guest_sp(void);
-int runner_load_state_file(const char *path);
 
 /* ------------------------------------------------------------------ GL */
 typedef unsigned int GLu;
@@ -138,14 +135,13 @@ static struct {
   uint32_t *last; int last_w, last_h;      /* last frame, tightly packed */
   /* settings */
   char shader_id[256];
-  int linear, widescreen, slot;
+  int linear, widescreen;
   /* librashader */
   libra_instance_t libra; int libra_state;
   libra_gl_filter_chain_t chain; char chain_id[256];
   size_t frame_count;
   char msg[200]; Uint32 msg_until;
-  int pending_save, pending_frames; unsigned frames;
-} G = { .slot = 1 };
+} G;
 
 typedef struct { char id[160], path[400], name[96]; } ShaderEntry;
 static ShaderEntry *g_shaders; static int g_shader_count;
@@ -179,7 +175,6 @@ static void settings_load(void) {
       else if (!strcmp(line, "shader")) snprintf(G.shader_id, sizeof G.shader_id, "%s", v);
       else if (!strcmp(line, "filter")) G.linear = !strcmp(v, "linear");
       else if (!strcmp(line, "widescreen")) G.widescreen = !strcmp(v, "on");
-      else if (!strcmp(line, "slot")) { G.slot = atoi(v); if (G.slot < 1 || G.slot > 9) G.slot = 1; }
     }
     fclose(f);
   }
@@ -195,9 +190,9 @@ static void settings_save(void) {
   char p[1100]; ini_path(p, sizeof p);
   FILE *f = fopen(p, "w"); if (!f) return;
   fprintf(f, "# Mega Man: The Wily Wars Recomp video settings (written by the in-game panel)\n");
-  fprintf(f, "renderer=%s\nshader=%s\nfilter=%s\nwidescreen=%s\nslot=%d\n",
+  fprintf(f, "renderer=%s\nshader=%s\nfilter=%s\nwidescreen=%s\n",
           G.want_gl ? "opengl" : "sdl", G.shader_id, G.linear ? "linear" : "nearest",
-          G.widescreen ? "on" : "off", G.slot);
+          G.widescreen ? "on" : "off");
   fclose(f);
 }
 
@@ -447,29 +442,7 @@ static void hk_window_created(SDL_Window *win, SDL_Renderer *r) {
 }
 
 static void note(const char *fmt, ...);
-/* Saves wait for a frame that parked in the main loop (see mmww_state_boundary). */
-static void pending_save_tick(void) {
-  G.frames++;
-  if (getenv("MMWW_A7LOG") && G.frames % (unsigned)(atoi(getenv("MMWW_A7LOG")) > 0 ? atoi(getenv("MMWW_A7LOG")) : 30) == 0)
-    { fprintf(stderr, "[A7] frame %u A7=$%06X%s\n", G.frames, mmww_guest_sp(), mmww_state_boundary() ? " boundary" : "");
-      extern void mmww_dump_stack(void); if (G.frames % 300 == 0 || (getenv("MMWW_A7DUMP") && G.frames > 6800 && G.frames < 6840)) mmww_dump_stack(); }
-  if (!G.pending_save) return;
-  if (mmww_state_boundary()) {
-    char path[48]; snprintf(path, sizeof path, "native_save_%d.bin", G.pending_save);
-    note(runner_save_state_file(path) ? "Saved to slot %d" : "Save to slot %d failed", G.pending_save);
-    G.pending_save = 0;
-  } else if (++G.pending_frames > 600) {
-    note("Slot %d not saved: no safe point in 10 s, try again", G.pending_save);
-    G.pending_save = 0;
-  }
-}
-static void request_save(int slot) {
-  G.pending_save = slot; G.pending_frames = 0;
-  if (mmww_state_boundary()) pending_save_tick();
-}
-
 static int hk_present(SDL_Window *win, const uint32_t *px, int stride, int w, int h) {
-  pending_save_tick();
   if (!G.active || !px || w <= 0 || h <= 0) return 0;
   if (SDL_GL_MakeCurrent(win, G.ctx)) return 0;
   upload_frame(px, stride, w, h);
@@ -485,22 +458,13 @@ static int hk_event(const SDL_Event *ev) {
   if (ev->type == SDL_KEYDOWN && !ev->key.repeat &&
       (ev->key.keysym.sym == SDLK_ESCAPE || ev->key.keysym.sym == SDLK_F12)) return 1;
   if (ev->type == SDL_CONTROLLERBUTTONDOWN && ev->cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) return 1;
-  /* F1-F9 load, Shift+F1-F9 save (saves wait for a safe frame). */
-  if (ev->type == SDL_KEYDOWN && !ev->key.repeat && !(ev->key.keysym.mod & KMOD_CTRL) &&
-      ev->key.keysym.sym >= SDLK_F1 && ev->key.keysym.sym <= SDLK_F9) {
-    int slot = ev->key.keysym.sym - SDLK_F1 + 1;
-    if (ev->key.keysym.mod & KMOD_SHIFT) request_save(slot);
-    else { char path[48]; snprintf(path, sizeof path, "native_save_%d.bin", slot);
-           note(runner_load_state_file(path) ? "Loaded slot %d" : "Slot %d is empty", slot); }
-    return 2;
-  }
   return 0;
 }
 
 /* ------------------------------------------------------------------ panel */
-enum { R_RESUME, R_SHADER, R_FILTER, R_WIDE, R_SAVE, R_LOAD, R_QUIT, R_COUNT };
+enum { R_RESUME, R_SHADER, R_FILTER, R_WIDE, R_QUIT, R_COUNT };
 static const char *ROW_NAME[R_COUNT] = {"Resume", "Shader", "Filter", "Widescreen",
-                                        "Save state", "Load state", "Quit game"};
+                                        "Quit game"};
 
 static void row_value(int r, char *out, size_t n) {
   out[0] = 0;
@@ -510,7 +474,6 @@ static void row_value(int r, char *out, size_t n) {
     else snprintf(out, n, "%s", i < 0 ? "Off" : g_shaders[i].name); break; }
   case R_FILTER: snprintf(out, n, "%s", G.linear ? "Smooth" : "Sharp"); break;
   case R_WIDE: snprintf(out, n, "%s", G.widescreen ? "16:9" : "Off"); break;
-  case R_SAVE: case R_LOAD: snprintf(out, n, "Slot %d", G.slot); break;
   }
 }
 
@@ -531,7 +494,7 @@ static void panel_draw(RpCanvas *c, int sel) {
     char v[160]; row_value(r, v, sizeof v);
     if (v[0]) {
       char shown[200];
-      int arrows = (r == R_SHADER || r == R_FILTER || r == R_WIDE || r == R_SAVE || r == R_LOAD);
+      int arrows = (r == R_SHADER || r == R_FILTER || r == R_WIDE);
       snprintf(shown, sizeof shown, arrows && r == sel ? "<  %s  >" : "%s", v);
       float tw = rp_text_width(RP_REGULAR, 19 * s, shown);
       float maxw = W * 0.55f;
@@ -574,7 +537,6 @@ static void present_menu(SDL_Window *win, RpCanvas *c, int sel) {
 }
 
 static void change(int row, int d, int *running) {
-  char path[48];
   switch (row) {
   case R_SHADER: {
     int i = shader_index() + d, n = g_shader_count;
@@ -584,12 +546,6 @@ static void change(int row, int d, int *running) {
     break; }
   case R_FILTER: G.linear = !G.linear; break;
   case R_WIDE: G.widescreen = !G.widescreen; mmww_widescreen_set(G.widescreen); break;
-  case R_SAVE: case R_LOAD:
-    if (d) { G.slot += d; if (G.slot < 1) G.slot = 9; if (G.slot > 9) G.slot = 1; break; }
-    snprintf(path, sizeof path, "native_save_%d.bin", G.slot);
-    if (row == R_SAVE) request_save(G.slot);
-    else note(runner_load_state_file(path) ? "Loaded slot %d" : "Slot %d is empty", G.slot);
-    break;
   case R_QUIT: *running = 0; break;
   }
 }
@@ -626,16 +582,16 @@ static void hk_run_menu(SDL_Window *win, int *running) {
       else if (k == 4) {
         if (sel == R_RESUME) open = 0;
         else if (sel == R_SHADER || sel == R_FILTER || sel == R_WIDE) change(sel, sel == R_SHADER ? 1 : 0, running);
-        else { change(sel, 0, running); if (sel == R_LOAD || sel == R_SAVE) open = 0; }
+        else change(sel, 0, running);
       } else if (k == 5) open = 0;
     } while (open && *running && SDL_PollEvent(&ev));
     if (open && *running) present_menu(win, &c, sel);
   }
   free(c.px);
   settings_save();
-  fprintf(stderr, "[PANEL] closed (shader=%s filter=%s widescreen=%s slot=%d)\n",
+  fprintf(stderr, "[PANEL] closed (shader=%s filter=%s widescreen=%s)\n",
           G.shader_id[0] ? G.shader_id : "off", G.linear ? "linear" : "nearest",
-          G.widescreen ? "on" : "off", G.slot);
+          G.widescreen ? "on" : "off");
 }
 
 __attribute__((constructor)) static void mmww_gl_install(void) {

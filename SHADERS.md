@@ -10,7 +10,7 @@ The shader setup follows the audited N64 recomp shader pack as closely as our pr
 - **Different runtime.** The N64 recomp compiles the presets inside RT64 (glslang, SPIRV-Cross). That loader is part of RT64's renderer and cannot be dropped into this port's SDL/OpenGL presenter. Here the same files are compiled at runtime by **librashader 0.12.0** (`librashader.dll`, MPL-2.0, loaded dynamically). Its OpenGL runtime runs on the OpenGL renderer and its Vulkan runtime on the Vulkan renderer. **Shaders work on Vulkan and OpenGL renderers only.**
 - **The 88 `.glslp` presets** (`libretro/glsl-shaders` @ `cba01a48`, `shaders/presets/`) are kept for the OpenGL renderer.
 
-Staging: `SLANG_SHADERS_DIR=<slang-shaders checkout> bash scripts/fetch_shaders.sh`. In-game: Esc / F12 / pad Guide, then Video, then Shader. Left/Right picks a preset and Enter applies it. The choice is saved and defaults to Off.
+Staging: `SLANG_SHADERS_DIR=<slang-shaders checkout> bash scripts/fetch_shaders.sh`. In-game: Esc / F12 / pad Guide, then the Shader row. Left/Right picks a preset and Enter applies it. The choice is saved and defaults to Off.
 
 ## License audit (same commit)
 

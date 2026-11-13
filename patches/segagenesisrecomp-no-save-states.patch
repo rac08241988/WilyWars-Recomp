@@ -1,0 +1,44 @@
+diff --git a/runner/main.c b/runner/main.c
+index 24ce5f8..9ce18fb 100644
+--- a/runner/main.c
++++ b/runner/main.c
+@@ -1183,6 +1183,13 @@ static const char *resolve_runner_path(const char *path, char *buf, size_t buf_l
+ static const char OWN_SAVE_MAGIC[8] = "GROWNS2\0";
+ #include "host_state.h"
+ 
++/* A game whose GameSpec reports states unavailable gets no state hotkeys,
++ * pad quick slots or state/rewind overlay at all (not just a refusal). */
++static int runner_states_off(void)
++{
++    return g_game_spec.state_unavailable_reason && g_game_spec.state_unavailable_reason();
++}
++
+ int runner_save_state_file(const char *path)
+ {
+     const char *reason=g_game_spec.state_unavailable_reason?g_game_spec.state_unavailable_reason():NULL;
+@@ -3439,7 +3446,7 @@ session_begin:;
+                     int slot = -1;
+                     if (ev.key.keysym.sym >= SDLK_F1 && ev.key.keysym.sym <= SDLK_F9)
+                         slot = ev.key.keysym.sym - SDLK_F1 + 1;
+-                    if (slot >= 1 && slot <= 9) {
++                    if (slot >= 1 && slot <= 9 && !runner_states_off()) {
+                         int is_save = (ev.key.keysym.mod & KMOD_SHIFT) != 0;
+                         char slot_name[48];
+                         snprintf(slot_name, sizeof(slot_name), "native_save_%d.bin", slot);
+@@ -3485,6 +3492,7 @@ session_begin:;
+                 overlay_request = 2;
+             prev_overlay_pad = pad;
+         }
++        if (overlay_request && runner_states_off()) overlay_request = 0;
+         if (overlay_request) {
+ #if GENESIS_HAS_RECOMP_NET
+             if (!genesis_netplay_active())
+@@ -3507,7 +3515,7 @@ session_begin:;
+         {
+             int save_slot = gamepad_consume_quicksave();
+             int load_slot = gamepad_consume_quickload();
+-            if (save_slot || load_slot) {
++            if ((save_slot || load_slot) && !runner_states_off()) {
+                 int slot = save_slot ? save_slot : load_slot;
+                 char slot_name[48];
+                 snprintf(slot_name, sizeof(slot_name), "native_save_%d.bin", slot);

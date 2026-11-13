@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Apply this port's small engine patches, in name order. Safe to re-run.
 #   segagenesisrecomp-cart-io.patch        cartridge I/O hook (save EEPROM, game/mmww_eeprom.c)
+#   segagenesisrecomp-no-save-states.patch hide state hotkeys/pad slots/overlay when the game has no states
 #   segagenesisrecomp-present-hooks.patch  presentation hooks (OpenGL presenter, panel, src/gl/)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

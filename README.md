@@ -17,10 +17,13 @@ time and built into a native Windows x64 exe.
 - Framework hardware: VDP, YM2612 (ymfm), SN76489 PSG and Z80 sound CPU.
   Any routine the static pass missed runs on the built-in 68000 interpreter
   fallback, so the game keeps running while coverage improves.
-- Planned (carried over from the other ports): one-click builder with ROM
-  picker, in-game Options side panel (Esc / F12 / pad Guide), the full libretro
-  shader set via librashader, opt-in 16:9 widescreen, save states, rewind, Xbox
-  and keyboard input.
+- One-click builder (`MMWW-Setup.exe`) with a ROM picker; the game is
+  generated and built on your PC.
+- In-game side panel (Esc / F12 / pad Guide): shaders from the libretro slang
+  set via librashader (live preview, default Off), sharp/smooth filter, opt-in
+  16:9 widescreen (default Off), quit.
+- Saves: the cartridge's own EEPROM saves, kept in `mmww.eep` beside the exe.
+  There are no save states.
 
 ## Play on Windows (no coding needed)
 
@@ -59,10 +62,8 @@ The project owner's PC:
 
 ## Known limitations
 
-- **Early build.** It boots to the title screen and file select. Stages have
-  not been tested yet.
-- **Saves.** The cartridge saves to a serial EEPROM, which is not emulated yet,
-  so passwords and save files may not stick. Use save states once the menu is in.
+- **Early build.** Boots, menus and Mega Man 1 stages are tested; Mega Man 2
+  and 3 are not covered by the native pass yet (they run on the interpreter).
 - **Partly interpreted.** The game is compiled C that jumps through function
   pointers, so the first static pass finds few routines. The rest runs on the
   interpreter fallback until coverage is fed back into `game/game.toml`.
