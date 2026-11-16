@@ -1,9 +1,9 @@
 # Mega Man: The Wily Wars Recompiled (Genesis)
 
-> **v1.0.0.** Boots, menus and stages run on Windows, with the side menu,
+> **v1.0.1.** Boots, menus and stages run on Windows, with the side menu,
 > shaders, opt-in widescreen, cartridge saves and the one-click builder.
 > Download: [Releases](https://github.com/rac08241988/WilyWars-Recomp/releases/latest)
-> (`WilyWars-GenesisRecomp-windows-x64-v1.0.0.zip`).
+> (`WilyWars-GenesisRecomp-windows-x64-v1.0.1.zip`).
 >
 > This project ships no game code or ROM data. You supply your own cartridge dump.
 
@@ -22,15 +22,39 @@ time and built into a native Windows x64 exe.
   generated and built on your PC.
 - In-game side panel (Esc / F12 / pad Guide): shaders from the libretro slang
   set via librashader (live preview, default Off), sharp/smooth filter, opt-in
-  16:9 widescreen (default Off), quit. Widescreen keeps the game, sprites and
-  HUD at 4:3 and fills the side columns with the stage: real tiles where the
-  game has drawn them, otherwise a darkened mirror of the stage edge.
+  16:9 widescreen (default Off), quit. See **Widescreen** below.
 - **Check for updates** in the side panel: asks GitHub for the latest release
   and, if there is a newer one, opens its page in your browser (nothing is
   downloaded or installed automatically).
 - Window and exe icon from the USA Genesis box art.
 - Saves: the cartridge's own EEPROM saves, kept in `mmww.eep` beside the exe.
   There are no save states.
+
+
+## Widescreen
+
+Off by default; Off is pixel-identical to the original game. When On, stages
+widen from 256 to 342 pixels (16:9 at the Genesis pixel shape):
+
+- **The side areas show the real stage.** The game itself only draws one
+  16-pixel column past the 4:3 view, so each frame the recomp rebuilds the
+  side columns from the game's own level data (room grid, screens and
+  metatiles), exactly as the game's column drawer would, and draws them with
+  the game's own tiles, palette and scroll. Nothing in the game's memory or
+  video RAM is changed.
+- **Beside one-screen-wide rooms and past the ends of the level** (for
+  example Elec Man's vertical shafts) the room's own outer wall/backdrop is
+  continued outward: the edge metatile columns are repeated (never flipped),
+  keeping only scenery. Ledges, ladders, spikes and doors at the edge are
+  replaced by the surrounding wall or backdrop, so nothing playable is copied.
+- **Black bars** on title, menus, stage select, cutscenes and during vertical
+  room-to-room scrolling.
+  A built-in check compares the rebuilt columns with what is on screen every
+  frame; if they ever disagree the sides go black instead of showing anything
+  wrong.
+- Sprites (Mega Man, enemies, items) and the HUD stay inside the 4:3 area.
+- The scrolling backdrop layer is shown in the sides only when it is a seamless
+  loop.
 
 ## Play on Windows (no coding needed)
 
@@ -89,8 +113,10 @@ Wine 9.22 on Linux:
   and 3 are less covered by the native pass (more of them runs on the
   interpreter, which is slower but correct).
 - **No save states.** Use the game's own save files.
-- **Widescreen sides are a fill.** The game only draws one tile column past the
-  4:3 view, so the sides are mostly a darkened mirror of the stage edge.
+- **Widescreen shows black** on title, menus, stage select, cutscenes and
+  during vertical room-to-room scrolling. Beside one-screen rooms the sides are
+  continued scenery, not level geometry. Enemies and items just outside the
+  4:3 view are not drawn in the sides.
 - **Partly interpreted.** The game is compiled C that jumps through function
   pointers, so the first static pass finds few routines. The rest runs on the
   interpreter fallback until coverage is fed back into `game/game.toml`.

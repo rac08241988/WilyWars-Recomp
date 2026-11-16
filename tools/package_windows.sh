@@ -20,7 +20,7 @@ cp "$RECOMP_EXE" "$OUT/tools/GenesisRecomp.exe"
 
 S="$OUT/src"
 cp "$ROOT/CMakeLists.txt" "$ROOT/README.md" "$ROOT/LICENSE" "$ROOT/NOTICE.md" "$ROOT/SHADERS.md" "$S/"
-cp "$ROOT/README.md" "$OUT/README.md"; cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"; cp "$ROOT/NOTICE.md" "$OUT/NOTICE.md"
+cp "$ROOT/README.md" "$OUT/README.md"; cp "$ROOT/CHANGELOG.md" "$OUT/CHANGELOG.md"; cp "$ROOT/CHANGELOG.md" "$S/"; cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"; cp "$ROOT/NOTICE.md" "$OUT/NOTICE.md"
 cp -r "$ROOT/cmake" "$ROOT/src" "$ROOT/vendor" "$ROOT/assets" "$S/"
 mkdir -p "$S/game"
 for f in "$ROOT"/game/*; do
@@ -53,7 +53,7 @@ Mega Man: The Wily Wars Recomp (Windows x64)
    game to C on your PC, builds it into game\ and starts it.
 
 After that, MMWW-Setup.exe just starts the game. "MMWW-Setup.exe --rebuild" builds again.
-In game: Esc / F12 / Guide button opens the side menu (shaders, filter, 16:9, save states).
+In game: Esc / F12 / Guide button opens the side menu (shaders, filter, 16:9 widescreen, check for updates, quit).
 This package contains no ROM and no code generated from one. setup.log has build output.
 R
 
